@@ -1,0 +1,130 @@
+# docker-compose.yml
+# VulnPriority container orchestration
+#
+# Customer install (Linux/Mac):
+#   curl -fsSL https://raw.githubusercontent.com/vulnpriority/vulnpriority/main/start.sh | bash
+#
+# Customer install (Windows PowerShell):
+#   irm https://raw.githubusercontent.com/vulnpriority/vulnpriority/main/start.ps1 | iex
+#
+# Customer update:
+#   Linux/Mac: curl -fsSL https://raw.githubusercontent.com/vulnpriority/vulnpriority/main/start.sh | bash
+#   Windows:   irm https://raw.githubusercontent.com/vulnpriority/vulnpriority/main/start.ps1 | iex
+#
+# Usage:
+#   Start:   docker compose up -d
+#   Stop:    docker compose down
+#   Logs:    docker compose logs -f
+#   Restart: docker compose restart backend
+#
+# WARNING: Never run docker compose down -v
+# The -v flag removes ALL volumes including the database.
+
+services:
+
+  # ── Postgres ────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: vulnpriority-postgres
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-vulnpriority}
+      POSTGRES_USER:     ${POSTGRES_USER:-vulnpriority}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - vulnpriority-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vulnpriority} -d ${POSTGRES_DB:-vulnpriority}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Redis ────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: vulnpriority-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    networks:
+      - vulnpriority-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ── Backend ──────────────────────────────────────────────────
+  # Single worker required — APScheduler lives inside the app process.
+  # Multiple workers would duplicate all scheduled jobs.
+  backend:
+    image: ghcr.io/vulnpriority/vulnpriority-backend:latest
+    container_name: vulnpriority-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL:      postgresql://${POSTGRES_USER:-vulnpriority}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vulnpriority}
+      REDIS_URL:         redis://redis:6379/0
+      DEBUG:             "false"
+      ENVIRONMENT:       ${ENVIRONMENT:-production}
+      NVD_API_KEY:       ${NVD_API_KEY:-}
+      VULNCHECK_API_KEY: ${VULNCHECK_API_KEY:-}
+      GITHUB_TOKEN:      ${GITHUB_TOKEN:-}
+      OTX_API_KEY:       ${OTX_API_KEY:-}
+      TSC_HOST:          ${TSC_HOST:-}
+      TSC_ACCESS_KEY:    ${TSC_ACCESS_KEY:-}
+      TSC_SECRET_KEY:    ${TSC_SECRET_KEY:-}
+      TSC_VERIFY_SSL:    ${TSC_VERIFY_SSL:-false}
+    volumes:
+      - backend-keys:/app/keys
+      - backend-reports:/app/reports
+    networks:
+      - vulnpriority-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ── Frontend ─────────────────────────────────────────────────
+  # nginx serving React + proxying /api/* to backend.
+  # Only container exposed to the outside world.
+  # Port 80  → redirects to HTTPS
+  # Port 443 → serves the app over HTTPS
+  frontend:
+    image: ghcr.io/vulnpriority/vulnpriority-frontend:latest
+    container_name: vulnpriority-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+    networks:
+      - vulnpriority-net
+
+# ── Networks ──────────────────────────────────────────────────
+networks:
+  vulnpriority-net:
+    driver: bridge
+
+# ── Volumes ───────────────────────────────────────────────────
+volumes:
+  postgres-data:
+  redis-data:
+  backend-keys:
+  backend-reports:
