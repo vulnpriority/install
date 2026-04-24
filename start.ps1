@@ -64,7 +64,7 @@ Write-Ok "Install directory ready"
 
 # ── Step 4: Download docker-compose.yml ──────────────────────
 Write-Info "Downloading latest docker-compose.yml..."
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/vulnpriority/vulnpriority/main/docker-compose.yml" `
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/vulnpriority/install/main/docker-compose.yml" `
     -OutFile "docker-compose.yml" -UseBasicParsing
 Write-Ok "docker-compose.yml downloaded"
 
@@ -175,5 +175,5 @@ Write-Host ""
 Write-Host "  Useful commands:"
 Write-Host "    Logs:    docker compose -f C:\vulnpriority\docker-compose.yml logs -f"
 Write-Host "    Stop:    docker compose -f C:\vulnpriority\docker-compose.yml down"
-Write-Host "    Update:  irm https://raw.githubusercontent.com/vulnpriority/vulnpriority/main/start.ps1 | iex"
+Write-Host "    Update:  irm https://raw.githubusercontent.com/vulnpriority/install/main/docker-compose.yml | iex"
 Write-Host ""
