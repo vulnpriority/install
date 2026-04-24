@@ -65,7 +65,7 @@ ok "Install directory ready"
 
 # ── Step 4: Download docker-compose.yml ──────────────────────
 info "Downloading latest docker-compose.yml..."
-curl -fsSL https://raw.githubusercontent.com/vulnpriority/vulnpriority/main/docker-compose.yml \
+curl -fsSL https://raw.githubusercontent.com/vulnpriority/install/main/docker-compose.yml \
     -o docker-compose.yml
 ok "docker-compose.yml downloaded"
 
