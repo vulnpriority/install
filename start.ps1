@@ -40,7 +40,7 @@ try {
 }
 $dockerReady = $false
 for ($i = 0; $i -lt 5; $i++) {
-    $null = docker info 2>&1
+    docker ps *> $null
     if ($LASTEXITCODE -eq 0) { $dockerReady = $true; break }
     Start-Sleep -Seconds 3
 }
