@@ -41,8 +41,8 @@ if ! docker pull ghcr.io/vulnpriority/vulnpriority-backend:latest --quiet >/dev/
     echo "  Please enter your VulnPriority credentials."
     echo "  (These were provided to you by the VulnPriority team)"
     echo ""
-    read -rp "  Username: " VP_USER
-    read -rp "  License token: " VP_TOKEN
+    read -rp "  Username: " VP_USER < /dev/tty
+    read -rp "  License token: " VP_TOKEN < /dev/tty
     echo ""
     if [ -z "$VP_USER" ] || [ -z "$VP_TOKEN" ]; then
         fail "Username and token are required. Contact support@vulnpriority.com for your credentials."
