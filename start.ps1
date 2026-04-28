@@ -51,17 +51,24 @@ Write-Ok "Docker is running"
 
 # ── Step 2: Registry login ────────────────────────────────────
 Write-Info "Checking registry access..."
-$manifestTest = docker manifest inspect ghcr.io/vulnpriority/vulnpriority-backend:latest 2>&1
-if ($LASTEXITCODE -ne 0) {
+$registryAuthed = $false
+try {
+    $manifestTest = docker manifest inspect ghcr.io/vulnpriority/vulnpriority-backend:latest 2>&1
+    if ($LASTEXITCODE -eq 0) { $registryAuthed = $true }
+} catch {
+    $registryAuthed = $false
+}
+
+if (-not $registryAuthed) {
     Write-Warn "Authentication required for VulnPriority registry."
     Write-Host ""
     Write-Host "  Please enter your VulnPriority credentials." -ForegroundColor Cyan
     Write-Host "  (These were provided to you by the VulnPriority team)" -ForegroundColor Cyan
     Write-Host ""
-    [Console]::Write("  Username: ")
-    $VpUser = [Console]::ReadLine()
-    [Console]::Write("  License token: ")
-    $VpToken = [Console]::ReadLine()
+    Write-Host "  Username: " -NoNewline
+    $VpUser = $host.UI.ReadLine()
+    Write-Host "  License token: " -NoNewline
+    $VpToken = $host.UI.ReadLine()
     Write-Host ""
 
     if ([string]::IsNullOrWhiteSpace($VpUser) -or [string]::IsNullOrWhiteSpace($VpToken)) {
