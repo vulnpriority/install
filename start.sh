@@ -27,32 +27,47 @@ echo "  VulnPriority"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Step 1: Check Docker
+# ── Step 1: Check Docker ──────────────────────────────────────
 info "Checking Docker..."
 command -v docker >/dev/null 2>&1 || fail "Docker is not installed. Install Docker Desktop from https://docker.com and try again."
 docker info >/dev/null 2>&1 || fail "Docker is not running. Start Docker Desktop and try again."
 ok "Docker is running"
 
-# Step 2: Check registry access
+# ── Step 2: Registry login ────────────────────────────────────
 info "Checking registry access..."
-docker pull ghcr.io/vulnpriority/vulnpriority-backend:latest --quiet >/dev/null 2>&1 || \
-    fail "Cannot access VulnPriority registry. Run: docker login ghcr.io -u vulnpriority --password YOUR_TOKEN"
-ok "Registry access confirmed"
+if ! docker pull ghcr.io/vulnpriority/vulnpriority-backend:latest --quiet >/dev/null 2>&1; then
+    warn "Not logged in to VulnPriority registry."
+    echo ""
+    echo "  Please enter your VulnPriority credentials."
+    echo "  (These were provided to you by the VulnPriority team)"
+    echo ""
+    read -rp "  Username: " VP_USER
+    read -rp "  License token: " VP_TOKEN
+    echo ""
+    if [ -z "$VP_USER" ] || [ -z "$VP_TOKEN" ]; then
+        fail "Username and token are required. Contact support@vulnpriority.com for your credentials."
+    fi
+    echo "$VP_TOKEN" | docker login ghcr.io -u "$VP_USER" --password-stdin >/dev/null 2>&1 || \
+        fail "Login failed. Check your credentials and try again. Contact support@vulnpriority.com if the issue persists."
+    ok "Logged in to registry"
+else
+    ok "Registry access confirmed"
+fi
 
-# Step 3: Create install directory
+# ── Step 3: Create install directory ─────────────────────────
 INSTALL_DIR="$HOME/vulnpriority"
 info "Setting up install directory at $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 ok "Install directory ready"
 
-# Step 4: Download docker-compose.yml
+# ── Step 4: Download docker-compose.yml ──────────────────────
 info "Downloading docker-compose.yml..."
 curl -fsSL https://raw.githubusercontent.com/vulnpriority/install/main/docker-compose.yml \
     -o docker-compose.yml
 ok "docker-compose.yml downloaded"
 
-# Step 5: Generate .env (first install only)
+# ── Step 5: Generate .env (first install only) ────────────────
 if [ ! -f ".env" ]; then
     info "Generating .env with random secrets..."
     DB_PASSWORD=$(openssl rand -hex 32)
@@ -77,7 +92,7 @@ else
     ok ".env already exists — keeping existing"
 fi
 
-# Step 6: Generate SSL certificate (first install only)
+# ── Step 6: Generate SSL certificate (first install only) ─────
 if [ ! -f "certs/cert.pem" ] || [ ! -f "certs/key.pem" ]; then
     info "Generating SSL certificate..."
     mkdir -p certs
@@ -96,17 +111,17 @@ else
     ok "SSL certificate already exists — keeping existing"
 fi
 
-# Step 7: Pull latest images
+# ── Step 7: Pull latest images ────────────────────────────────
 info "Pulling latest images..."
 docker compose pull
 ok "Images up to date"
 
-# Step 8: Start containers
+# ── Step 8: Start containers ──────────────────────────────────
 info "Starting VulnPriority..."
 docker compose up -d
 ok "VulnPriority is starting"
 
-# Wait for backend
+# ── Wait for backend ──────────────────────────────────────────
 info "Waiting for backend to be ready (about 60 seconds)..."
 ATTEMPTS=0
 MAX_ATTEMPTS=30
@@ -121,7 +136,7 @@ until docker exec vulnpriority-backend curl -sf http://localhost:8000/ >/dev/nul
 done
 [ $ATTEMPTS -lt $MAX_ATTEMPTS ] && ok "Backend is ready"
 
-# Done
+# ── Done ──────────────────────────────────────────────────────
 SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
 [ -z "$SERVER_IP" ] && SERVER_IP="localhost"
 
