@@ -2,10 +2,10 @@
 # VulnPriority installer and launcher for Windows
 #
 # Usage (first install) - run in PowerShell as Administrator:
-#   irm https://raw.githubusercontent.com/vulnpriority/vulnpriority/main/start.ps1 | iex
+#   irm https://raw.githubusercontent.com/vulnpriority/install/main/start.ps1 | iex
 #
 # Usage (update):
-#   irm https://raw.githubusercontent.com/vulnpriority/vulnpriority/main/start.ps1 | iex
+#   irm https://raw.githubusercontent.com/vulnpriority/install/main/start.ps1 | iex
 #
 # What this does:
 #   1. Checks Docker is installed and running
@@ -51,15 +51,17 @@ Write-Ok "Docker is running"
 
 # ── Step 2: Registry login ────────────────────────────────────
 Write-Info "Checking registry access..."
-$pullTest = docker pull ghcr.io/vulnpriority/vulnpriority-backend:latest --quiet 2>&1
+$manifestTest = docker manifest inspect ghcr.io/vulnpriority/vulnpriority-backend:latest 2>&1
 if ($LASTEXITCODE -ne 0) {
-    Write-Warn "Not logged in to VulnPriority registry."
+    Write-Warn "Authentication required for VulnPriority registry."
     Write-Host ""
     Write-Host "  Please enter your VulnPriority credentials." -ForegroundColor Cyan
     Write-Host "  (These were provided to you by the VulnPriority team)" -ForegroundColor Cyan
     Write-Host ""
-    $VpUser  = Read-Host "  Username"
-    $VpToken = Read-Host "  License token"
+    [Console]::Write("  Username: ")
+    $VpUser = [Console]::ReadLine()
+    [Console]::Write("  License token: ")
+    $VpToken = [Console]::ReadLine()
     Write-Host ""
 
     if ([string]::IsNullOrWhiteSpace($VpUser) -or [string]::IsNullOrWhiteSpace($VpToken)) {
