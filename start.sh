@@ -1,5 +1,5 @@
 #!/bin/bash
-# install.sh
+# start.sh
 # VulnPriority installer and launcher for Linux/Mac
 #
 # First install:
