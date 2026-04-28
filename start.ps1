@@ -38,10 +38,13 @@ try {
 } catch {
     Write-Fail "Docker is not installed. Install Docker Desktop from https://docker.com and try again."
 }
-try {
+$dockerReady = $false
+for ($i = 0; $i -lt 5; $i++) {
     $null = docker info 2>&1
-    if ($LASTEXITCODE -ne 0) { throw }
-} catch {
+    if ($LASTEXITCODE -eq 0) { $dockerReady = $true; break }
+    Start-Sleep -Seconds 3
+}
+if (-not $dockerReady) {
     Write-Fail "Docker is not running. Start Docker Desktop and try again."
 }
 Write-Ok "Docker is running"
