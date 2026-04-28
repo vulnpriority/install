@@ -62,6 +62,13 @@ services:
   # ── Backend ──────────────────────────────────────────────────
   # Single worker required — APScheduler lives inside the app process.
   # Multiple workers would duplicate all scheduled jobs.
+  #
+  # shm_size: 1gb — Chromium (used by Playwright for PDF reports) requires
+  # shared memory for rendering. Without this, complex reports with many
+  # widgets crash mid-render. 1GB is sufficient for all report sizes.
+  #
+  # PLAYWRIGHT_BROWSERS_PATH — must match the path set in Dockerfile
+  # so Playwright can find the Chromium binary at runtime.
   backend:
     image: ghcr.io/vulnpriority/vulnpriority-backend:latest
     container_name: vulnpriority-backend
@@ -73,23 +80,25 @@ services:
         condition: service_healthy
     env_file: .env
     environment:
-      DATABASE_URL:      postgresql://${POSTGRES_USER:-vulnpriority}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vulnpriority}
-      REDIS_URL:         redis://redis:6379/0
-      DEBUG:             "false"
-      ENVIRONMENT:       ${ENVIRONMENT:-production}
-      NVD_API_KEY:       ${NVD_API_KEY:-}
-      VULNCHECK_API_KEY: ${VULNCHECK_API_KEY:-}
-      GITHUB_TOKEN:      ${GITHUB_TOKEN:-}
-      OTX_API_KEY:       ${OTX_API_KEY:-}
-      TSC_HOST:          ${TSC_HOST:-}
-      TSC_ACCESS_KEY:    ${TSC_ACCESS_KEY:-}
-      TSC_SECRET_KEY:    ${TSC_SECRET_KEY:-}
-      TSC_VERIFY_SSL:    ${TSC_VERIFY_SSL:-false}
+      DATABASE_URL:             postgresql://${POSTGRES_USER:-vulnpriority}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vulnpriority}
+      REDIS_URL:                redis://redis:6379/0
+      DEBUG:                    "false"
+      ENVIRONMENT:              ${ENVIRONMENT:-production}
+      NVD_API_KEY:              ${NVD_API_KEY:-}
+      VULNCHECK_API_KEY:        ${VULNCHECK_API_KEY:-}
+      GITHUB_TOKEN:             ${GITHUB_TOKEN:-}
+      OTX_API_KEY:              ${OTX_API_KEY:-}
+      TSC_HOST:                 ${TSC_HOST:-}
+      TSC_ACCESS_KEY:           ${TSC_ACCESS_KEY:-}
+      TSC_SECRET_KEY:           ${TSC_SECRET_KEY:-}
+      TSC_VERIFY_SSL:           ${TSC_VERIFY_SSL:-false}
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
     volumes:
       - backend-keys:/app/keys
       - backend-reports:/app/reports
     networks:
       - vulnpriority-net
+    shm_size: '1gb'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
       interval: 30s
