@@ -52,12 +52,10 @@ Write-Ok "Docker is running"
 # ── Step 2: Registry login ────────────────────────────────────
 Write-Info "Checking registry access..."
 $registryAuthed = $false
-try {
-    $manifestTest = docker manifest inspect ghcr.io/vulnpriority/vulnpriority-backend:latest 2>&1
-    if ($LASTEXITCODE -eq 0) { $registryAuthed = $true }
-} catch {
-    $registryAuthed = $false
-}
+$ErrorActionPreference = "Continue"
+$manifestTest = docker manifest inspect ghcr.io/vulnpriority/vulnpriority-backend:latest 2>&1
+if ($LASTEXITCODE -eq 0) { $registryAuthed = $true }
+$ErrorActionPreference = "Stop"
 
 if (-not $registryAuthed) {
     Write-Warn "Authentication required for VulnPriority registry."
@@ -126,7 +124,7 @@ TSC_ACCESS_KEY=
 TSC_SECRET_KEY=
 TSC_VERIFY_SSL=false
 "@
-    $envContent | Out-File -FilePath ".env" -Encoding UTF8 -NoNewline
+    [System.IO.File]::WriteAllText("$InstallDir\.env", $envContent, [System.Text.UTF8Encoding]::new($false))
     Write-Ok ".env generated with random secrets"
 } else {
     Write-Ok ".env already exists — keeping existing"
